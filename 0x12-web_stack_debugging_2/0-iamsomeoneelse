@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# A script runs the whoami command under the user passed as an argument
+
+current_user=$(whoami)
+
+if id "$1" &> /dev/null; then
+	if [ "$current_user" = "$1" ]; then
+		echo "$current_user"
+	else
+		echo "$1"
+	fi
+fi
