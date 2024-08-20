@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-#!/usr/bin/python3
 """
 Recursive function that queries the Reddit API
 """
@@ -33,3 +32,4 @@ def recurse(subreddit, hot_list=[], after=""):
             return recurse(subreddit, hot_list, after)
     else:
         return None
+
