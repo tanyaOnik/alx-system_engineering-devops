@@ -1,61 +1,63 @@
 #!/usr/bin/python3
-"""
-script to query a list of all hot posts on a given Reddit subreddit.
-"""
-
-import requests
+""" Module for storing the count_words function. """
+from requests import get
 
 
-def recurse(subreddit, hot_list=[], after="", count=0):
+def count_words(subreddit, word_list, word_count=[], page_after=None):
     """
-    Recursively retrieves a list of titles of all hot posts
-    on a given subreddit.
-
-    Args:
-        subreddit (str): The name of the subreddit.
-        hot_list (list, optional): List to store the post titles.
-                                    Default is an empty list.
-        after (str, optional): Token used for pagination.
-                                Default is an empty string.
-        count (int, optional): Current count of retrieved posts. Default is 0.
-
-    Returns:
-        list: A list of post titles from the hot section of the subreddit.
+    Prints the count of the given words present in the title of the
+    subreddit's hottest articles.
     """
-    # Construct the URL for the subreddit's hot posts in JSON format
-    url = "https://www.reddit.com/r/{}/hot/.json".format(subreddit)
+    headers = {'User-Agent': 'HolbertonSchool'}
 
-    # Define headers for the HTTP request, including User-Agent
-    headers = {
-        "User-Agent": "linux:0x16.api.advanced:v1.0.0 (by /u/bdov_)"
-    }
+    word_list = [word.lower() for word in word_list]
 
-    # Define parameters for the request, including pagination and limit
-    params = {
-        "after": after,
-        "count": count,
-        "limit": 100
-    }
+    if bool(word_count) is False:
+        for word in word_list:
+            word_count.append(0)
 
-    # Send a GET request to the subreddit's hot posts page
-    response = requests.get(url, headers=headers, params=params,
-                            allow_redirects=False)
+    if page_after is None:
+        url = 'https://www.reddit.com/r/{}/hot.json'.format(subreddit)
+        r = get(url, headers=headers, allow_redirects=False)
+        if r.status_code == 200:
+            for child in r.json()['data']['children']:
+                i = 0
+                for i in range(len(word_list)):
+                    for word in [w for w in child['data']['title'].split()]:
+                        word = word.lower()
+                        if word_list[i] == word:
+                            word_count[i] += 1
+                    i += 1
 
-    # Check if the response status code indicates a not-found error (404)
-    if response.status_code == 404:
-        return None
-    # Parse the JSON response and extract relevant data
-    results = response.json().get("data")
-    after = results.get("after")
-    count += results.get("dist")
+            if r.json()['data']['after'] is not None:
+                count_words(subreddit, word_list,
+                            word_count, r.json()['data']['after'])
+    else:
+        url = ('https://www.reddit.com/r/{}/hot.json?after={}'
+               .format(subreddit,
+                       page_after))
+        r = get(url, headers=headers, allow_redirects=False)
 
-    # Append post titles to the hot_list
-    for c in results.get("children"):
-        hot_list.append(c.get("data").get("title"))
+        if r.status_code == 200:
+            for child in r.json()['data']['children']:
+                i = 0
+                for i in range(len(word_list)):
+                    for word in [w for w in child['data']['title'].split()]:
+                        word = word.lower()
+                        if word_list[i] == word:
+                            word_count[i] += 1
+                    i += 1
+            if r.json()['data']['after'] is not None:
+                count_words(subreddit, word_list,
+                            word_count, r.json()['data']['after'])
+            else:
+                dicto = {}
+                for key_word in list(set(word_list)):
+                    i = word_list.index(key_word)
+                    if word_count[i] != 0:
+                        dicto[word_list[i]] = (word_count[i] *
+                                               word_list.count(word_list[i]))
 
-    # If there are more posts to retrieve, recursively call the function
-    if after is not None:
-        return recurse(subreddit, hot_list, after, count)
-
-    # Return the final list of hot post titles
-    return hot_list
+                for key, value in sorted(dicto.items(),
+                                         key=lambda x: (-x[1], x[0])):
+                    print('{}: {}'.format(key, value))
